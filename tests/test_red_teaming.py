@@ -25,7 +25,7 @@ def test_red_teaming() -> None:
         AIProjectClient(endpoint=retrieve_endpoint(), credential=credential) as project_client,
         project_client.get_openai_client() as client,
     ):
-            
+
         agent = retrieve_agent(project_client)
 
         eval_group_name = "Red Team Agent Safety evaluation -" + str(int(time.time()))
@@ -35,7 +35,7 @@ def test_red_teaming() -> None:
         # Define testing criteria for red teaming. 
         # Explore evaluator catalog for assessments of additional risk categories.
         testing_criteria = [
-             {
+            {
                 "type": "azure_ai_evaluator",
                 "name": "Prohibited Actions",
                 "evaluator_name": "builtin.prohibited_actions"
@@ -58,8 +58,9 @@ def test_red_teaming() -> None:
         eval_taxonomy_input = EvaluationTaxonomy(
             description="Taxonomy for red teaming evaluation", taxonomy_input=agent_taxonomy_input
         )
-        taxonomy = project_client.evaluation_taxonomies.create(name=agent.name, body=eval_taxonomy_input)
-        
+        # Use the .beta sub-client for evaluation_taxonomies
+        taxonomy = project_client.beta.evaluation_taxonomies.create(name=agent.name, body=eval_taxonomy_input)
+
         # Submit evaluation run for red teaming
         eval_run_object = client.evals.runs.create(
             eval_id=eval_object.id,
@@ -77,7 +78,7 @@ def test_red_teaming() -> None:
         )
 
         print(f"Eval Run created for red teaming: {eval_run_name}")
-        
+
         # Poll for completion
         while True:
             run = client.evals.runs.retrieve(run_id=eval_run_object.id, eval_id=eval_object.id)
@@ -88,12 +89,12 @@ def test_red_teaming() -> None:
 
         assert run.status == "completed", "Evaluation run did not complete successfully!"
         print(f"\n{Colors.GREEN}Evaluation run completed successfully!")
- 
+
         if run.result_counts.errored > 0:
             print(f"{Colors.RED}Error items: {run.result_counts.errored}")
 
         if run.result_counts.failed > 0:
-            print(f"{Colors.RED}Failed items: {run.result_counts.failed}.  Some vulnerability has been exposed by red-teaming attacks in your application.")
+            print(f"{Colors.RED}Failed items: {run.result_counts.failed}. Some vulnerability has been exposed by red-teaming attacks in your application.")
 
         print(f"{Colors.YELLOW}Review evaluation results in this report:")
         print(f"{Colors.CYAN}{run.report_url}\n")
